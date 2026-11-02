@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="WeatherApp.Mobile.Views.MainPage"
-             BackgroundColor="#1E1E2E">
+             BackgroundColor="#6924FF">
 
     <Grid RowDefinitions="0.45*, 0.55*" Padding="15" RowSpacing="15">
 
