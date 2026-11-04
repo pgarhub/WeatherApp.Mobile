@@ -4,93 +4,191 @@
              xmlns:vm="clr-namespace:WeatherApp.Mobile.ViewModels"
              x:Class="WeatherApp.Mobile.Views.MainPage"
              x:DataType="vm:MainViewModel"
-             BackgroundColor="#12073d"
              Shell.NavBarIsVisible="False">
 
+    <!-- TŁO Z GRADIENTEM DOPASOWANE DO EKRANU STARTOWEGO -->
+    <ContentPage.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0F172A" Offset="0.0" />
+            <GradientStop Color="#1E293B" Offset="0.5" />
+            <GradientStop Color="#090D16" Offset="1.0" />
+        </LinearGradientBrush>
+    </ContentPage.Background>
+
     <Grid>
+        <!-- DASHBOARD -->
+        <ScrollView>
+            <Grid RowDefinitions="Auto, *" Padding="20" RowSpacing="20">
 
-        <!-- 1. WŁAŚCIWY DASHBOARD (Karta pogody + kafelki) -->
-        <Grid RowDefinitions="0.45*, 0.55*" Padding="15" RowSpacing="15">
+                <!-- 1. GŁÓWNA KARTA POGODOWA -->
+                <Border Grid.Row="0" 
+                        StrokeShape="RoundRectangle 28" 
+                        StrokeThickness="1.5"
+                        Margin="0,10,0,0">
+                    <Border.Stroke>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#38BDF8" Offset="0.0" />
+                            <GradientStop Color="#1E293B" Offset="0.5" />
+                            <GradientStop Color="#F59E0B" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Stroke>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#1E293B" Offset="0.0" />
+                            <GradientStop Color="#0F172A" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
 
-            <!-- Górna sekcja: WeatherCard -->
-            <Border Grid.Row="0" StrokeShape="RoundRectangle 20" BackgroundColor="#2D2D44" Padding="20" StrokeThickness="0">
-                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
-                    <!-- Miasto z ViewModelu -->
-                    <Label Text="{Binding CurrentWeather.CityName}" FontSize="28" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center"/>
+                    <VerticalStackLayout Padding="24" Spacing="12" HorizontalOptions="Center">
 
-                    <!-- Ikona pogody z ViewModelu -->
-                    <Label Text="{Binding CurrentWeather.Icon}" FontSize="60" HorizontalOptions="Center"/>
+                        <!-- Nazwa miasta -->
+                        <Label Text="{Binding CurrentWeather.CityName}" 
+                               FontSize="30" 
+                               FontAttributes="Bold" 
+                               TextColor="White" 
+                               HorizontalOptions="Center"
+                               CharacterSpacing="0.5"/>
 
-                    <!-- Temperatura z ViewModelu -->
-                    <HorizontalStackLayout HorizontalOptions="Center" Spacing="2">
-                        <Label Text="{Binding CurrentWeather.Temperature, StringFormat='{0:F1}'}" FontSize="44" FontAttributes="Bold" TextColor="Gold"/>
-                        <Label Text="°C" FontSize="44" FontAttributes="Bold" TextColor="Gold"/>
-                    </HorizontalStackLayout>
+                        <!-- Ikona pogody -->
+                        <Label Text="{Binding CurrentWeather.Icon}" 
+                               FontSize="78" 
+                               HorizontalOptions="Center"
+                               Margin="0,-5,0,-5"/>
 
-                    <!-- Status pogodowy z ViewModelu -->
-                    <Label Text="{Binding CurrentWeather.ConditionText}" FontSize="16" TextColor="LightGray" HorizontalOptions="Center"/>
+                        <!-- Temperatura -->
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="4">
+                            <Label Text="{Binding CurrentWeather.Temperature, StringFormat='{0:F1}'}" 
+                                   FontSize="54" 
+                                   FontAttributes="Bold" 
+                                   TextColor="#F59E0B"/>
+                            <Label Text="°C" 
+                                   FontSize="28" 
+                                   FontAttributes="Bold" 
+                                   TextColor="#FBBF24"
+                                   Margin="0,8,0,0"/>
+                        </HorizontalStackLayout>
 
-                    <!-- Przycisk odświeżania -->
-                    <Button Text="🔄 Odśwież dane" 
-                            Command="{Binding RefreshCommand}"
-                            BackgroundColor="#3B3B58" TextColor="White" CornerRadius="10" Margin="0,10,0,0"/>
+                        <!-- Opis stanu pogodowego -->
+                        <Border StrokeShape="RoundRectangle 16" BackgroundColor="#1E3A8A" Padding="16,6" HorizontalOptions="Center" Stroke="#3B82F6" StrokeThickness="1">
+                            <Label Text="{Binding CurrentWeather.ConditionText}" 
+                                   FontSize="14" 
+                                   FontAttributes="Bold"
+                                   TextColor="#93C5FD"/>
+                        </Border>
+
+                        <!-- Przycisk Odświeżania -->
+                        <Button Text="🔄  Odśwież dane" 
+                                Command="{Binding RefreshCommand}"
+                                TextColor="White" 
+                                FontAttributes="Bold"
+                                FontSize="14"
+                                CornerRadius="18" 
+                                HeightRequest="48"
+                                Margin="0,15,0,0"
+                                Padding="24,0">
+                            <Button.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#2563EB" Offset="0.0" />
+                                    <GradientStop Color="#7C3AED" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Button.Background>
+                        </Button>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 2. KAFELKI SENSORÓW (GRID 2x2) -->
+                <Grid Grid.Row="1" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="15" RowSpacing="15">
+
+                    <!-- KAFEL 1: KROKI -->
+                    <Border Grid.Row="0" Grid.Column="0" 
+                            StrokeShape="RoundRectangle 22" 
+                            BackgroundColor="#1E293B" 
+                            Padding="16" 
+                            Stroke="#334155" 
+                            StrokeThickness="1">
+                        <VerticalStackLayout Spacing="8">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="👟" FontSize="16"/>
+                                <Label Text="Kroki" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                            <Label Text="{Binding StepCount, StringFormat='{0}'}" FontSize="24" TextColor="White" FontAttributes="Bold"/>
+                            <ProgressBar Progress="0.54" ProgressColor="#38BDF8" BackgroundColor="#0F172A"/>
+                            <Label Text="Cel: 10 000" FontSize="11" TextColor="#64748B"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- KAFEL 2: BIOMETRIA -->
+                    <Border Grid.Row="0" Grid.Column="1" 
+                            StrokeShape="RoundRectangle 22" 
+                            BackgroundColor="#1E293B" 
+                            Padding="16" 
+                            Stroke="#334155" 
+                            StrokeThickness="1">
+                        <VerticalStackLayout Spacing="6">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="🔒" FontSize="16"/>
+                                <Label Text="Biometria" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                            <Label Text="{Binding BiometricStatus}" FontSize="15" TextColor="#F87171" FontAttributes="Bold" Margin="0,4,0,0"/>
+                            <Label Text="Status autoryzacji" FontSize="11" TextColor="#64748B"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- KAFEL 3: MAPA -->
+                    <Border Grid.Row="1" Grid.Column="0" 
+                            StrokeShape="RoundRectangle 22" 
+                            BackgroundColor="#1E293B" 
+                            Padding="16" 
+                            Stroke="#334155" 
+                            StrokeThickness="1">
+                        <VerticalStackLayout Spacing="6">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="🗺️" FontSize="16"/>
+                                <Label Text="Radar" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                            <Label Text="Brak opadów" FontSize="15" TextColor="White" FontAttributes="Bold" Margin="0,4,0,0"/>
+                            <Label Text="Strefa czysta" FontSize="11" TextColor="#64748B"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- KAFEL 4: ALERTY -->
+                    <Border Grid.Row="1" Grid.Column="1" 
+                            StrokeShape="RoundRectangle 22" 
+                            BackgroundColor="#1E293B" 
+                            Padding="16" 
+                            Stroke="#334155" 
+                            StrokeThickness="1">
+                        <VerticalStackLayout Spacing="6">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="⚠️" FontSize="16"/>
+                                <Label Text="Alerty" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                            <Label Text="Brak ostrzeżeń" FontSize="15" TextColor="#34D399" FontAttributes="Bold" Margin="0,4,0,0"/>
+                            <Label Text="Pogoda bezpieczna" FontSize="11" TextColor="#64748B"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                </Grid>
+            </Grid>
+        </ScrollView>
+
+        <!-- 3. NAKŁADKA ŁADOWANIA (GLASSHOUSE EFFECT) -->
+        <Grid BackgroundColor="#DD0F172A" 
+              IsVisible="{Binding IsLoading}"
+              VerticalOptions="Fill" 
+              HorizontalOptions="Fill">
+            <Border StrokeShape="RoundRectangle 24" 
+                    BackgroundColor="#1E293B" 
+                    Padding="30" 
+                    HorizontalOptions="Center" 
+                    VerticalOptions="Center"
+                    Stroke="#38BDF8"
+                    StrokeThickness="1.5">
+                <VerticalStackLayout Spacing="16" HorizontalOptions="Center">
+                    <ActivityIndicator IsRunning="True" Color="#38BDF8" WidthRequest="55" HeightRequest="55"/>
+                    <Label Text="Pobieranie danych..." FontSize="15" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center"/>
                 </VerticalStackLayout>
             </Border>
-
-            <!-- Dolna sekcja: SensorsGrid (2 kolumny, 2 wiersze) -->
-            <Grid Grid.Row="1" ColumnDefinitions="*, *" RowDefinitions="*, *" ColumnSpacing="10" RowSpacing="10">
-
-                <!-- Kafel 1: Kroki -->
-                <Border Grid.Row="0" Grid.Column="0" StrokeShape="RoundRectangle 15" BackgroundColor="#252538" Padding="10" StrokeThickness="0">
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center">
-                        <Label Text="👟 Kroki" FontSize="18" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center"/>
-                        <Label Text="{Binding StepCount, StringFormat='{0} / 10 000'}" FontSize="14" TextColor="Gray" Margin="0,5,0,0" HorizontalOptions="Center"/>
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- Kafel 2: Biometria -->
-                <Border Grid.Row="0" Grid.Column="1" StrokeShape="RoundRectangle 15" BackgroundColor="#252538" Padding="10" StrokeThickness="0">
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center">
-                        <Label Text="🔒 Biometria" FontSize="18" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center"/>
-                        <Label Text="{Binding BiometricStatus}" FontSize="14" TextColor="LightCoral" Margin="0,5,0,0" HorizontalOptions="Center"/>
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- Kafel 3: Mapa -->
-                <Border Grid.Row="1" Grid.Column="0" StrokeShape="RoundRectangle 15" BackgroundColor="#252538" Padding="10" StrokeThickness="0">
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center">
-                        <Label Text="🗺️ Mapa" FontSize="18" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center"/>
-                        <Label Text="Brak opadów" FontSize="14" TextColor="Gray" Margin="0,5,0,0" HorizontalOptions="Center"/>
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- Kafel 4: Alerty -->
-                <Border Grid.Row="1" Grid.Column="1" StrokeShape="RoundRectangle 15" BackgroundColor="#252538" Padding="10" StrokeThickness="0">
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center">
-                        <Label Text="⚠️ Alerty" FontSize="18" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center"/>
-                        <Label Text="Brak ostrzeżeń" FontSize="14" TextColor="LightGreen" Margin="0,5,0,0" HorizontalOptions="Center"/>
-                    </VerticalStackLayout>
-                </Border>
-
-            </Grid>
-
         </Grid>
-
-        <!-- 2. NAKŁADKA EKRANU ŁADOWANIA  -->
-        <Grid BackgroundColor="#252538" 
-              IsVisible="{Binding IsLoading}"
-              VerticalOptions="Fill" HorizontalOptions="Fill">
-            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="15">
-                <ActivityIndicator IsRunning="True" 
-                                   Color="white" 
-                                   WidthRequest="60" HeightRequest="60"/>
-                <Label Text="Ładowanie danych pogodowych..." 
-                       FontSize="16" 
-                       TextColor="White" 
-                       HorizontalOptions="Center"/>
-            </VerticalStackLayout>
-        </Grid>
-
     </Grid>
-
 </ContentPage>
