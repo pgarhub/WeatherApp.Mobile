@@ -1,5 +1,7 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using WeatherApp.Mobile.Models;
 using WeatherApp.Mobile.Services;
@@ -14,7 +16,7 @@ public class MainViewModel : INotifyPropertyChanged
     private int _stepCount = 5420;
     private string _biometricStatus = "Zablokowane";
     private bool _isLoading = true;
-    private bool _isWeatherLoading = false; 
+    private bool _isWeatherLoading = false;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -75,7 +77,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public bool IsWeatherLoading // <-- WŁAŚCIWOŚĆ DLA LOKALNEGO KRĘCIOŁKA W KAFELKU
+    public bool IsWeatherLoading
     {
         get => _isWeatherLoading;
         set
@@ -105,38 +107,46 @@ public class MainViewModel : INotifyPropertyChanged
 
         try
         {
-            var weather = await _weatherService.GetCurrentWeatherAsync("Nowy Sącz");
+            // Limit czasu 5 sekund na odpowiedź z sieci
+            var weatherTask = _weatherService.GetCurrentWeatherAsync("Nowy Sącz");
+            var timeoutTask = Task.Delay(5000);
 
-            if (weather != null)
+            var completedTask = await Task.WhenAny(weatherTask, timeoutTask);
+
+            if (completedTask == weatherTask)
             {
-                CurrentWeather = weather;
+                var weather = await weatherTask;
+                CurrentWeather = weather ?? GetFallbackWeatherData("Brak danych");
             }
             else
             {
-                CurrentWeather = new WeatherData
-                {
-                    CityName = "Nowy Sącz",
-                    Temperature = 0.0,
-                    ConditionText = "Brak połączenia",
-                    Icon = "🔌"
-                };
+                // Przekroczono limit czasu (np. brak sieci w emulatorze)
+                System.Diagnostics.Debug.WriteLine("Przekroczono czas oczekiwania na API.");
+                CurrentWeather = GetFallbackWeatherData("Brak odpowiedzi (Timeout)");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Błąd pobierania pogody: {ex.Message}");
-            CurrentWeather = new WeatherData
-            {
-                CityName = "Nowy Sącz",
-                Temperature = 0.0,
-                ConditionText = "Błąd sieci",
-                Icon = "⚠️"
-            };
+            CurrentWeather = GetFallbackWeatherData("Błąd sieci");
         }
         finally
         {
-            IsWeatherLoading = false; // Zdejmuje ładowanie z kafelka
-            IsLoading = false;        // Zdejmuje ewentualną globalną nakładkę
+            // Gwarancja ukrycia wskaźników ładowania
+            IsWeatherLoading = false;
+            IsLoading = false;
         }
+    }
+
+    // Pomocnicza metoda na wypadek błędu
+    private WeatherData GetFallbackWeatherData(string statusText)
+    {
+        return new WeatherData
+        {
+            CityName = "Nowy Sącz",
+            Temperature = 0.0,
+            ConditionText = statusText,
+            Icon = "⚠️"
+        };
     }
 }
