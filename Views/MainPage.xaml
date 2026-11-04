@@ -4,7 +4,7 @@
              xmlns:vm="clr-namespace:WeatherApp.Mobile.ViewModels"
              x:Class="WeatherApp.Mobile.Views.MainPage"
              x:DataType="vm:MainViewModel"
-             BackgroundColor="#6924FF"
+             BackgroundColor="#12073d"
              Shell.NavBarIsVisible="False">
 
     <Grid>
@@ -77,7 +77,7 @@
         </Grid>
 
         <!-- 2. NAKŁADKA EKRANU ŁADOWANIA  -->
-        <Grid BackgroundColor="#6a00ff" 
+        <Grid BackgroundColor="#252538" 
               IsVisible="{Binding IsLoading}"
               VerticalOptions="Fill" HorizontalOptions="Fill">
             <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="15">
