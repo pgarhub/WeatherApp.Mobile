@@ -14,6 +14,7 @@ public class MainViewModel : INotifyPropertyChanged
     private int _stepCount = 5420;
     private string _biometricStatus = "Zablokowane";
     private bool _isLoading = true;
+    private bool _isWeatherLoading = false; 
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -74,6 +75,19 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public bool IsWeatherLoading // <-- WŁAŚCIWOŚĆ DLA LOKALNEGO KRĘCIOŁKA W KAFELKU
+    {
+        get => _isWeatherLoading;
+        set
+        {
+            if (_isWeatherLoading != value)
+            {
+                _isWeatherLoading = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public ICommand RefreshCommand { get; }
 
     public MainViewModel(WeatherApiService weatherService)
@@ -87,20 +101,42 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task FetchWeatherAsync()
     {
-        IsLoading = true; // Włączamy ekran ładowania
+        IsWeatherLoading = true;
 
         try
         {
-            // Pobieramy faktyczną pogodę z Nowego Sącza przez API Open-Meteo
-            CurrentWeather = await _weatherService.GetCurrentWeatherAsync("Nowy Sącz");
+            var weather = await _weatherService.GetCurrentWeatherAsync("Nowy Sącz");
+
+            if (weather != null)
+            {
+                CurrentWeather = weather;
+            }
+            else
+            {
+                CurrentWeather = new WeatherData
+                {
+                    CityName = "Nowy Sącz",
+                    Temperature = 0.0,
+                    ConditionText = "Brak połączenia",
+                    Icon = "🔌"
+                };
+            }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Błąd pobierania pogody: {ex.Message}");
+            CurrentWeather = new WeatherData
+            {
+                CityName = "Nowy Sącz",
+                Temperature = 0.0,
+                ConditionText = "Błąd sieci",
+                Icon = "⚠️"
+            };
         }
         finally
         {
-            IsLoading = false; // Wyłączamy ekran ładowania bez względu na wynik
+            IsWeatherLoading = false; // Zdejmuje ładowanie z kafelka
+            IsLoading = false;        // Zdejmuje ewentualną globalną nakładkę
         }
     }
 }
