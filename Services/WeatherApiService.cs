@@ -12,18 +12,16 @@ public class WeatherApiService
         _httpClient = new HttpClient();
     }
 
-    public async Task<WeatherData> GetCurrentWeatherAsync(string cityName)
+    public async Task<WeatherData?> GetCurrentWeatherAsync(string cityName)
     {
         try
         {
-            // Współrzędne dla Nowego Sącza (szerokość: 49.62, długość: 20.69)
-            string url = "https://api.open-meteo.com/v1/forecast?latitude=49.62&longitude=20.69&current=temperature_2m,weather_code";
+            string url = "https://api.open-meteo.com/v1/forecast?latitude=49.62&longitude=20.69&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m";
 
             var response = await _httpClient.GetFromJsonAsync<OpenMeteoResponse>(url);
 
             if (response?.Current != null)
             {
-                // Tłumaczymy kod pogody na polski tekst i ikonkę
                 var (condition, icon) = MapWeatherCode(response.Current.WeatherCode);
 
                 return new WeatherData
@@ -40,14 +38,8 @@ public class WeatherApiService
             System.Diagnostics.Debug.WriteLine($"Błąd pobierania pogody: {ex.Message}");
         }
 
-        // Awaryjne dane, gdyby internet siadł
-        return new WeatherData
-        {
-            CityName = cityName,
-            Temperature = 20.0,
-            ConditionText = "Błąd pobierania",
-            Icon = "⚠️"
-        };
+        // Zwracamy null w razie awarii, żeby ViewModel obsłużył brak sieci
+        return null;
     }
 
     private (string Text, string Icon) MapWeatherCode(int code)
@@ -67,7 +59,7 @@ public class WeatherApiService
     }
 }
 
-// Modele pomocnicze do odczytu JSON z Open-Meteo
+// Modele pomocnicze do deserializacji odpowiedzi JSON z Open-Meteo
 public class OpenMeteoResponse
 {
     [System.Text.Json.Serialization.JsonPropertyName("current")]
@@ -78,6 +70,18 @@ public class CurrentWeatherDto
 {
     [System.Text.Json.Serialization.JsonPropertyName("temperature_2m")]
     public double Temperature2m { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("relative_humidity_2m")]
+    public int Humidity { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("apparent_temperature")]
+    public double ApparentTemperature { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("precipitation")]
+    public double Precipitation { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("wind_speed_10m")]
+    public double WindSpeed { get; set; }
 
     [System.Text.Json.Serialization.JsonPropertyName("weather_code")]
     public int WeatherCode { get; set; }
