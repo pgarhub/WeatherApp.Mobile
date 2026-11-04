@@ -9,26 +9,83 @@ namespace WeatherApp.Mobile.ViewModels;
 public class MainViewModel : INotifyPropertyChanged
 {
     private readonly WeatherApiService _weatherService;
+
     private WeatherData _currentWeather = new();
     private int _stepCount = 5420;
     private string _biometricStatus = "Zablokowane";
+    private bool _isLoading = true;
+    private bool _isWeatherLoading = false; 
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string propertyName = null!)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 
     public WeatherData CurrentWeather
     {
         get => _currentWeather;
-        set { _currentWeather = value; OnPropertyChanged(); }
+        set
+        {
+            if (_currentWeather != value)
+            {
+                _currentWeather = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
     public int StepCount
     {
         get => _stepCount;
-        set { _stepCount = value; OnPropertyChanged(); }
+        set
+        {
+            if (_stepCount != value)
+            {
+                _stepCount = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
     public string BiometricStatus
     {
         get => _biometricStatus;
-        set { _biometricStatus = value; OnPropertyChanged(); }
+        set
+        {
+            if (_biometricStatus != value)
+            {
+                _biometricStatus = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set
+        {
+            if (_isLoading != value)
+            {
+                _isLoading = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool IsWeatherLoading // <-- WŁAŚCIWOŚĆ DLA LOKALNEGO KRĘCIOŁKA W KAFELKU
+    {
+        get => _isWeatherLoading;
+        set
+        {
+            if (_isWeatherLoading != value)
+            {
+                _isWeatherLoading = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
     public ICommand RefreshCommand { get; }
@@ -38,18 +95,48 @@ public class MainViewModel : INotifyPropertyChanged
         _weatherService = weatherService;
         RefreshCommand = new Command(async () => await FetchWeatherAsync());
 
-        // Inicjalne pobranie danych
+        // Inicjalne pobranie danych po uruchomieniu
         _ = FetchWeatherAsync();
     }
 
     public async Task FetchWeatherAsync()
     {
-        CurrentWeather = await _weatherService.GetCurrentWeatherAsync("Nowy Sącz");
-    }
+        IsWeatherLoading = true;
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        try
+        {
+            var weather = await _weatherService.GetCurrentWeatherAsync("Nowy Sącz");
+
+            if (weather != null)
+            {
+                CurrentWeather = weather;
+            }
+            else
+            {
+                CurrentWeather = new WeatherData
+                {
+                    CityName = "Nowy Sącz",
+                    Temperature = 0.0,
+                    ConditionText = "Brak połączenia",
+                    Icon = "🔌"
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Błąd pobierania pogody: {ex.Message}");
+            CurrentWeather = new WeatherData
+            {
+                CityName = "Nowy Sącz",
+                Temperature = 0.0,
+                ConditionText = "Błąd sieci",
+                Icon = "⚠️"
+            };
+        }
+        finally
+        {
+            IsWeatherLoading = false; // Zdejmuje ładowanie z kafelka
+            IsLoading = false;        // Zdejmuje ewentualną globalną nakładkę
+        }
     }
 }
