@@ -171,8 +171,8 @@
                 </Grid>
             </Grid>
         </ScrollView>
-
         <!-- 3. NAKŁADKA ŁADOWANIA (GLASSHOUSE EFFECT) -->
+
         <Grid BackgroundColor="#DD0F172A" 
               IsVisible="{Binding IsLoading}"
               VerticalOptions="Fill" 
