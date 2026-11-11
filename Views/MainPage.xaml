@@ -134,22 +134,21 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- KAFEL 3: MAPA OPENSTREETMAP Z GPS -->
+                    <!-- KAFEL 3: MAPA -->
                     <Border Grid.Row="1" Grid.Column="0" 
                             StrokeShape="RoundRectangle 22" 
                             BackgroundColor="#1E293B" 
-                            Padding="0" 
+                            Padding="16" 
                             Stroke="#334155" 
-                            StrokeThickness="1"
-                            HeightRequest="140">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding GetUserLocationCommand}"/>
-                        </Border.GestureRecognizers>
-                        <Grid>
-                            <WebView x:Name="MapWebView" 
-                                     VerticalOptions="Fill" 
-                                     HorizontalOptions="Fill" />
-                        </Grid>
+                            StrokeThickness="1">
+                        <VerticalStackLayout Spacing="6">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="🗺️" FontSize="16"/>
+                                <Label Text="Radar" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                            <Label Text="Brak opadów" FontSize="15" TextColor="White" FontAttributes="Bold" Margin="0,4,0,0"/>
+                            <Label Text="Strefa czysta" FontSize="11" TextColor="#64748B"/>
+                        </VerticalStackLayout>
                     </Border>
 
                     <!-- KAFEL 4: ALERTY -->
@@ -172,8 +171,8 @@
                 </Grid>
             </Grid>
         </ScrollView>
+        <!-- 3. NAKŁADKA ŁADOWANIA (GLASSHOUSE EFFECT) -->
 
-        <!-- 3. NAKŁADKA ŁADOWANIA -->
         <Grid BackgroundColor="#DD0F172A" 
               IsVisible="{Binding IsLoading}"
               VerticalOptions="Fill" 
