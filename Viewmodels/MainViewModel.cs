@@ -139,4 +139,53 @@ public class MainViewModel : INotifyPropertyChanged
             IsLoading = false;        // Zdejmuje ewentualną globalną nakładkę
         }
     }
+    // Dopisaj te właściwości w klasie MainViewModel:
+    private string _gpsStatusText = "Pobierz lokalizację GPS";
+    private double _currentLatitude = 49.62; // Domyślnie Nowy Sącz
+    private double _currentLongitude = 20.69;
+
+    public string GpsStatusText
+    {
+        get => _gpsStatusText;
+        set { if (_gpsStatusText != value) { _gpsStatusText = value; OnPropertyChanged(); } }
+    }
+
+    public double CurrentLatitude
+    {
+        get => _currentLatitude;
+        set { if (_currentLatitude != value) { _currentLatitude = value; OnPropertyChanged(); } }
+    }
+
+    public double CurrentLongitude
+    {
+        get => _currentLongitude;
+        set { if (_currentLongitude != value) { _currentLongitude = value; OnPropertyChanged(); } }
+    }
+
+    public ICommand GetUserLocationCommand => new Command(async () => await GetUserLocationAsync());
+
+    public async Task GetUserLocationAsync()
+    {
+        try
+        {
+            var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+            if (status != PermissionStatus.Granted)
+            {
+                status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+                if (status != PermissionStatus.Granted) return;
+            }
+
+            var location = await Geolocation.Default.GetLocationAsync(new GeolocationRequest(GeolocationAccuracy.Medium));
+            if (location != null)
+            {
+                CurrentLatitude = location.Latitude;
+                CurrentLongitude = location.Longitude;
+                GpsStatusText = $"{location.Latitude:F2}, {location.Longitude:F2}";
+            }
+        }
+        catch (Exception)
+        {
+            GpsStatusText = "Błąd GPS";
+        }
+    }
 }
