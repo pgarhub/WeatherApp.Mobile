@@ -6,7 +6,6 @@
              x:DataType="vm:MainViewModel"
              Shell.NavBarIsVisible="False">
 
-    <!-- TŁO Z GRADIENTEM DOPASOWANE DO EKRANU STARTOWEGO -->
     <ContentPage.Background>
         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#0F172A" Offset="0.0" />
@@ -18,7 +17,7 @@
     <Grid>
         <!-- DASHBOARD -->
         <ScrollView>
-            <Grid RowDefinitions="Auto, *" Padding="20" RowSpacing="20">
+            <Grid RowDefinitions="Auto, Auto" Padding="20" RowSpacing="20">
 
                 <!-- 1. GŁÓWNA KARTA POGODOWA -->
                 <Border Grid.Row="0" 
@@ -40,8 +39,6 @@
                     </Border.Background>
 
                     <VerticalStackLayout Padding="24" Spacing="12" HorizontalOptions="Center">
-
-                        <!-- Nazwa miasta -->
                         <Label Text="{Binding CurrentWeather.CityName}" 
                                FontSize="30" 
                                FontAttributes="Bold" 
@@ -49,13 +46,11 @@
                                HorizontalOptions="Center"
                                CharacterSpacing="0.5"/>
 
-                        <!-- Ikona pogody -->
                         <Label Text="{Binding CurrentWeather.Icon}" 
                                FontSize="78" 
                                HorizontalOptions="Center"
                                Margin="0,-5,0,-5"/>
 
-                        <!-- Temperatura -->
                         <HorizontalStackLayout HorizontalOptions="Center" Spacing="4">
                             <Label Text="{Binding CurrentWeather.Temperature, StringFormat='{0:F1}'}" 
                                    FontSize="54" 
@@ -68,7 +63,6 @@
                                    Margin="0,8,0,0"/>
                         </HorizontalStackLayout>
 
-                        <!-- Opis stanu pogodowego -->
                         <Border StrokeShape="RoundRectangle 16" BackgroundColor="#1E3A8A" Padding="16,6" HorizontalOptions="Center" Stroke="#3B82F6" StrokeThickness="1">
                             <Label Text="{Binding CurrentWeather.ConditionText}" 
                                    FontSize="14" 
@@ -76,7 +70,6 @@
                                    TextColor="#93C5FD"/>
                         </Border>
 
-                        <!-- Przycisk Odświeżania -->
                         <Button Text="🔄  Odśwież dane" 
                                 Command="{Binding RefreshCommand}"
                                 TextColor="White" 
@@ -96,8 +89,8 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- 2. KAFELKI SENSORÓW (GRID 2x2) -->
-                <Grid Grid.Row="1" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="15" RowSpacing="15">
+                <!-- 2. KAFELKI -->
+                <Grid Grid.Row="1" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="15" RowSpacing="15">
 
                     <!-- KAFEL 1: KROKI -->
                     <Border Grid.Row="0" Grid.Column="0" 
@@ -134,38 +127,48 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- KAFEL 3: MAPA -->
-                    <Border Grid.Row="1" Grid.Column="0" 
+                    <!-- KAFEL 3: ALERTY -->
+                    <Border Grid.Row="1" Grid.ColumnSpan="2" 
                             StrokeShape="RoundRectangle 22" 
                             BackgroundColor="#1E293B" 
                             Padding="16" 
                             Stroke="#334155" 
                             StrokeThickness="1">
-                        <VerticalStackLayout Spacing="6">
-                            <HorizontalStackLayout Spacing="6">
-                                <Label Text="🗺️" FontSize="16"/>
-                                <Label Text="Radar" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
-                            </HorizontalStackLayout>
-                            <Label Text="Brak opadów" FontSize="15" TextColor="White" FontAttributes="Bold" Margin="0,4,0,0"/>
-                            <Label Text="Strefa czysta" FontSize="11" TextColor="#64748B"/>
-                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <HorizontalStackLayout Spacing="6">
+                                    <Label Text="⚠️" FontSize="16"/>
+                                    <Label Text="Alerty" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
+                                </HorizontalStackLayout>
+                                <Label Text="Pogoda bezpieczna" FontSize="12" TextColor="#64748B"/>
+                            </VerticalStackLayout>
+
+                            <Border Grid.Column="1"
+                                    StrokeShape="RoundRectangle 12"
+                                    BackgroundColor="#064E3B"
+                                    Stroke="#10B981"
+                                    StrokeThickness="1"
+                                    Padding="12,6"
+                                    VerticalOptions="Center">
+                                <Label Text="Brak ostrzeżeń" FontSize="13" TextColor="#34D399" FontAttributes="Bold"/>
+                            </Border>
+                        </Grid>
                     </Border>
 
-                    <!-- KAFEL 4: ALERTY -->
-                    <Border Grid.Row="1" Grid.Column="1" 
+                    <!-- KAFEL 4: SAMA MAPA -->
+                    <Border x:Name="SmallMapContainer"
+                            Grid.Row="2" Grid.ColumnSpan="2" 
                             StrokeShape="RoundRectangle 22" 
-                            BackgroundColor="#1E293B" 
-                            Padding="16" 
+                            BackgroundColor="#0F172A" 
                             Stroke="#334155" 
-                            StrokeThickness="1">
-                        <VerticalStackLayout Spacing="6">
-                            <HorizontalStackLayout Spacing="6">
-                                <Label Text="⚠️" FontSize="16"/>
-                                <Label Text="Alerty" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
-                            </HorizontalStackLayout>
-                            <Label Text="Brak ostrzeżeń" FontSize="15" TextColor="#34D399" FontAttributes="Bold" Margin="0,4,0,0"/>
-                            <Label Text="Pogoda bezpieczna" FontSize="11" TextColor="#64748B"/>
-                        </VerticalStackLayout>
+                            StrokeThickness="1"
+                            HeightRequest="260"
+                            Margin="0,0,0,12">
+                        <WebView x:Name="MapWebView"
+                                 Navigating="MapWebView_Navigating"
+                                 HeightRequest="260"
+                                 HorizontalOptions="Fill"
+                                 VerticalOptions="Fill" />
                     </Border>
 
                 </Grid>

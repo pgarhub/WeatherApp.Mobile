@@ -17,12 +17,40 @@ public class MainViewModel : INotifyPropertyChanged
     private string _biometricStatus = "Zablokowane";
     private bool _isLoading = true;
     private bool _isWeatherLoading = false;
+    private double _currentLatitude;
+    private double _currentLongitude;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected void OnPropertyChanged([CallerMemberName] string propertyName = null!)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    public double CurrentLatitude
+    {
+        get => _currentLatitude;
+        set
+        {
+            if (_currentLatitude != value)
+            {
+                _currentLatitude = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public double CurrentLongitude
+    {
+        get => _currentLongitude;
+        set
+        {
+            if (_currentLongitude != value)
+            {
+                _currentLongitude = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
     public WeatherData CurrentWeather
