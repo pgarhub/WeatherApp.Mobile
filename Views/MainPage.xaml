@@ -18,7 +18,7 @@
     <Grid>
         <!-- DASHBOARD -->
         <ScrollView>
-            <Grid RowDefinitions="Auto, *" Padding="20" RowSpacing="20">
+            <Grid RowDefinitions="Auto, Auto" Padding="20" RowSpacing="20">
 
                 <!-- 1. GŁÓWNA KARTA POGODOWA -->
                 <Border Grid.Row="0" 
@@ -96,8 +96,8 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- 2. KAFELKI SENSORÓW (GRID 2x2) -->
-                <Grid Grid.Row="1" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="15" RowSpacing="15">
+                <!-- 2. KAFELKI SENSORÓW I MAPY -->
+                <Grid Grid.Row="1" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="15" RowSpacing="15">
 
                     <!-- KAFEL 1: KROKI -->
                     <Border Grid.Row="0" Grid.Column="0" 
@@ -134,7 +134,7 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- KAFEL 3: MAPA -->
+                    <!-- KAFEL 3: RADAR -->
                     <Border Grid.Row="1" Grid.Column="0" 
                             StrokeShape="RoundRectangle 22" 
                             BackgroundColor="#1E293B" 
@@ -165,6 +165,33 @@
                             </HorizontalStackLayout>
                             <Label Text="Brak ostrzeżeń" FontSize="15" TextColor="#34D399" FontAttributes="Bold" Margin="0,4,0,0"/>
                             <Label Text="Pogoda bezpieczna" FontSize="11" TextColor="#64748B"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- KAFEL 5: INTERAKTYWNA MAPA -->
+                    <Border Grid.Row="2" Grid.ColumnSpan="2" 
+                            StrokeShape="RoundRectangle 22" 
+                            BackgroundColor="#1E293B" 
+                            Padding="14" 
+                            Stroke="#334155" 
+                            StrokeThickness="1"
+                            Margin="0,0,0,10">
+                        <VerticalStackLayout Spacing="10">
+                            <HorizontalStackLayout Spacing="6" Margin="2,2,0,0">
+                                <Label Text="📍" FontSize="16"/>
+                                <Label Text="Lokalizacja" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+
+                            <Border StrokeShape="RoundRectangle 14"
+                                    StrokeThickness="0"
+                                    HeightRequest="250"
+                                    BackgroundColor="#0F172A">
+                                <WebView x:Name="MapWebView"
+                                         Navigating="MapWebView_Navigating"
+                                         HeightRequest="250"
+                                         HorizontalOptions="Fill"
+                                         VerticalOptions="Fill" />
+                            </Border>
                         </VerticalStackLayout>
                     </Border>
 
