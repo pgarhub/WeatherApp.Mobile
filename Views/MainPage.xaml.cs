@@ -6,7 +6,13 @@ namespace WeatherApp.Mobile.Views;
 public partial class MainPage : ContentPage
 {
     private readonly MainViewModel _viewModel;
-    private bool _isMapInitialized;
+    private bool _isMapRendered;
+    private bool _hasRealGpsFix;
+    private bool _isFullScreen;
+    private IDispatcherTimer? _gpsTimer;
+
+    private double _userLatitude = 49.6218;
+    private double _userLongitude = 20.6970;
 
     public MainPage(MainViewModel viewModel)
     {
@@ -21,14 +27,34 @@ public partial class MainPage : ContentPage
     {
         base.OnAppearing();
 
-        if (!_isMapInitialized)
+        if (!_isMapRendered)
         {
-            _isMapInitialized = true;
-            await InitializeUserLocationAndMapAsync();
+            _isMapRendered = true;
+            await InitializeLocationAndMapAsync();
+        }
+        else
+        {
+            _gpsTimer?.Start();
         }
     }
 
-    // 1. Naprawia przesuwanie mapy palcem wewnątrz ScrollView na Androidzie
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _gpsTimer?.Stop();
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if (_isFullScreen)
+        {
+            MainThread.BeginInvokeOnMainThread(async () => await CloseFullScreenMapAsync());
+            return true;
+        }
+
+        return base.OnBackButtonPressed();
+    }
+
     private void ConfigureWebViewTouchForAndroid()
     {
 #if ANDROID
@@ -47,19 +73,29 @@ public partial class MainPage : ContentPage
                     handler.PlatformView.Parent?.RequestDisallowInterceptTouchEvent(false);
                 }
 
-                // False pozwala WebView normalnie obsłużyć kliknięcie i przesunięcie mapy
                 e.Handled = false;
             };
         });
 #endif
     }
 
-    // 2. Pobiera aktualną lokalizację GPS urządzenia
-    private async Task InitializeUserLocationAndMapAsync()
+    private async Task InitializeLocationAndMapAsync()
     {
-        double lat = _viewModel.CurrentLatitude;
-        double lon = _viewModel.CurrentLongitude;
+        await UpdateUserCoordinatesFromGpsAsync();
 
+        _viewModel.CurrentLatitude = _userLatitude;
+        _viewModel.CurrentLongitude = _userLongitude;
+
+        RenderMap(_userLatitude, _userLongitude);
+
+        _gpsTimer = Dispatcher.CreateTimer();
+        _gpsTimer.Interval = TimeSpan.FromSeconds(4);
+        _gpsTimer.Tick += async (s, e) => await RefreshLiveDotAsync();
+        _gpsTimer.Start();
+    }
+
+    private async Task<bool> UpdateUserCoordinatesFromGpsAsync()
+    {
         try
         {
             var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
@@ -70,15 +106,19 @@ public partial class MainPage : ContentPage
 
             if (status == PermissionStatus.Granted)
             {
-                var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
-                var location = await Geolocation.Default.GetLocationAsync(request);
+                var location = await Geolocation.Default.GetLocationAsync(
+                    new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(5)));
+
+                if (location == null)
+                {
+                    location = await Geolocation.Default.GetLastKnownLocationAsync();
+                }
 
                 if (location != null)
                 {
-                    lat = location.Latitude;
-                    lon = location.Longitude;
-                    _viewModel.CurrentLatitude = lat;
-                    _viewModel.CurrentLongitude = lon;
+                    _userLatitude = location.Latitude;
+                    _userLongitude = location.Longitude;
+                    return true;
                 }
             }
         }
@@ -87,17 +127,24 @@ public partial class MainPage : ContentPage
             System.Diagnostics.Debug.WriteLine($"Błąd GPS: {ex.Message}");
         }
 
-        // Domyślnie Nowy Sącz, jeśli GPS i ViewModel zwrócą 0
-        if (lat == 0 && lon == 0)
-        {
-            lat = 49.6218;
-            lon = 20.6970;
-        }
-
-        RenderMap(lat, lon);
+        return false;
     }
 
-    // 3. Renderuje interaktywną mapę Leaflet
+    private async Task RefreshLiveDotAsync()
+    {
+        bool gotFix = await UpdateUserCoordinatesFromGpsAsync();
+        if (!gotFix) return;
+
+        bool isFirstFix = !_hasRealGpsFix;
+        _hasRealGpsFix = true;
+
+        string latStr = _userLatitude.ToString(CultureInfo.InvariantCulture);
+        string lonStr = _userLongitude.ToString(CultureInfo.InvariantCulture);
+        string centerParam = isFirstFix ? "true" : "false";
+
+        await MapWebView.EvaluateJavaScriptAsync($"updateLiveUserLocation({latStr}, {lonStr}, {centerParam});");
+    }
+
     private void RenderMap(double lat, double lon)
     {
         string latStr = lat.ToString(CultureInfo.InvariantCulture);
@@ -113,7 +160,7 @@ public partial class MainPage : ContentPage
                 <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
                 <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />
                 <style>
-                    body, html {{ margin: 0; padding: 0; height: 100%; background: #161E2E; }}
+                    body, html {{ margin: 0; padding: 0; height: 100%; background: #0F172A; }}
                     #map {{ width: 100%; height: 100%; }}
                 </style>
             </head>
@@ -121,44 +168,142 @@ public partial class MainPage : ContentPage
                 <div id='map'></div>
                 <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
                 <script>
+                    var homeLat = {latStr};
+                    var homeLon = {lonStr};
+                    var isFullScreen = false;
+
                     var map = L.map('map', {{
                         zoomControl: true,
                         attributionControl: false,
                         dragging: true,
                         touchZoom: true
-                    }}).setView([{latStr}, {lonStr}], 13);
+                    }}).setView([homeLat, homeLon], 15);
 
                     L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
                         maxZoom: 19
                     }}).addTo(map);
 
-                    var marker = L.marker([{latStr}, {lonStr}]).addTo(map)
-                        .bindPopup('Twoja lokalizacja').openPopup();
+                    var userCircle = L.circle([homeLat, homeLon], {{
+                        color: '#38BDF8',
+                        fillColor: '#38BDF8',
+                        fillOpacity: 0.15,
+                        radius: 120,
+                        weight: 1
+                    }}).addTo(map);
 
-                    // Obsługa kliknięcia w dowolne miejsce na mapie
+                    var userDot = L.circleMarker([homeLat, homeLon], {{
+                        radius: 9,
+                        fillColor: '#2563EB',
+                        color: '#FFFFFF',
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 1
+                    }}).addTo(map);
+
+                    var clickedPin = null;
+
                     map.on('click', function(e) {{
+                        if (!isFullScreen) {{
+                            window.location.href = 'maui://fullscreen';
+                            return;
+                        }}
+
                         var newLat = e.latlng.lat.toFixed(5);
                         var newLon = e.latlng.lng.toFixed(5);
 
-                        marker.setLatLng(e.latlng)
-                              .setPopupContent('Wybrano: ' + newLat + ', ' + newLon)
-                              .openPopup();
+                        if (clickedPin === null) {{
+                            clickedPin = L.marker(e.latlng).addTo(map);
+                        }} else {{
+                            clickedPin.setLatLng(e.latlng);
+                        }}
 
-                        // Przekazanie współrzędnych do C#
                         window.location.href = 'maui://mapclick?lat=' + newLat + '&lon=' + newLon;
                     }});
+
+                    function setFullScreenMode(enabled) {{
+                        isFullScreen = enabled;
+                        setTimeout(function() {{
+                            map.invalidateSize();
+                        }}, 150);
+                    }}
+
+                    function updateLiveUserLocation(newLat, newLon, shouldCenter) {{
+                        homeLat = newLat;
+                        homeLon = newLon;
+                        userDot.setLatLng([newLat, newLon]);
+                        userCircle.setLatLng([newLat, newLon]);
+
+                        if (shouldCenter) {{
+                            map.flyTo([newLat, newLon], 15, {{ duration: 0.8 }});
+                        }}
+                    }}
+
+                    function resetToUserLocation() {{
+                        if (clickedPin !== null) {{
+                            map.removeLayer(clickedPin);
+                            clickedPin = null;
+                        }}
+                        map.flyTo([homeLat, homeLon], 15, {{ duration: 0.8 }});
+                    }}
                 </script>
             </body>
             </html>"
         };
     }
 
-    // 4. Odbiera kliknięcie z mapy w kodzie C#
-    private void MapWebView_Navigating(object? sender, WebNavigatingEventArgs e)
+    private async Task OpenFullScreenMapAsync()
     {
+        if (_isFullScreen) return;
+        _isFullScreen = true;
+
+        SmallMapContainer.Content = null;
+        MapWebView.HeightRequest = -1;
+        FullScreenMapContainer.Content = MapWebView;
+        FullScreenMapOverlay.IsVisible = true;
+
+        await Task.Delay(100);
+        await MapWebView.EvaluateJavaScriptAsync("setFullScreenMode(true);");
+    }
+
+    private async Task CloseFullScreenMapAsync()
+    {
+        if (!_isFullScreen) return;
+        _isFullScreen = false;
+
+        FullScreenMapOverlay.IsVisible = false;
+        FullScreenMapContainer.Content = null;
+        MapWebView.HeightRequest = 260;
+        SmallMapContainer.Content = MapWebView;
+
+        await Task.Delay(100);
+        await MapWebView.EvaluateJavaScriptAsync("setFullScreenMode(false);");
+    }
+
+    private async void OnCloseFullScreenClicked(object? sender, EventArgs e)
+    {
+        await CloseFullScreenMapAsync();
+    }
+
+    private async void OnResetMapButtonClicked(object? sender, EventArgs e)
+    {
+        _viewModel.CurrentLatitude = _userLatitude;
+        _viewModel.CurrentLongitude = _userLongitude;
+
+        await MapWebView.EvaluateJavaScriptAsync("resetToUserLocation();");
+    }
+
+    private async void MapWebView_Navigating(object? sender, WebNavigatingEventArgs e)
+    {
+        if (e.Url.StartsWith("maui://fullscreen"))
+        {
+            e.Cancel = true;
+            await OpenFullScreenMapAsync();
+            return;
+        }
+
         if (e.Url.StartsWith("maui://mapclick"))
         {
-            e.Cancel = true; // Blokuje próbę otwarcia adresu jako strony WWW
+            e.Cancel = true;
 
             var uri = new Uri(e.Url);
             var queryParams = uri.Query.TrimStart('?').Split('&');
@@ -182,9 +327,6 @@ public partial class MainPage : ContentPage
             {
                 _viewModel.CurrentLatitude = clickedLat.Value;
                 _viewModel.CurrentLongitude = clickedLon.Value;
-
-                // Opcjonalnie: odśwież od razu pogodę dla klikniętego punktu na mapie:
-                // _ = _viewModel.RefreshWeatherCommand.ExecuteAsync(null);
             }
         }
     }
