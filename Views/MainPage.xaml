@@ -134,21 +134,32 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- KAFEL 3: MAPA -->
-                    <Border Grid.Row="1" Grid.Column="0" 
+                    <!-- KAFEL 3: ALERTY -->
+                    <Border Grid.Row="1" Grid.ColumnSpan="2" 
                             StrokeShape="RoundRectangle 22" 
                             BackgroundColor="#1E293B" 
                             Padding="16" 
                             Stroke="#334155" 
                             StrokeThickness="1">
-                        <VerticalStackLayout Spacing="6">
-                            <HorizontalStackLayout Spacing="6">
-                                <Label Text="🗺️" FontSize="16"/>
-                                <Label Text="Radar" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
-                            </HorizontalStackLayout>
-                            <Label Text="Brak opadów" FontSize="15" TextColor="White" FontAttributes="Bold" Margin="0,4,0,0"/>
-                            <Label Text="Strefa czysta" FontSize="11" TextColor="#64748B"/>
-                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <HorizontalStackLayout Spacing="6">
+                                    <Label Text="⚠️" FontSize="16"/>
+                                    <Label Text="Alerty" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
+                                </HorizontalStackLayout>
+                                <Label Text="Pogoda bezpieczna" FontSize="12" TextColor="#64748B"/>
+                            </VerticalStackLayout>
+
+                            <Border Grid.Column="1"
+                                    StrokeShape="RoundRectangle 12"
+                                    BackgroundColor="#064E3B"
+                                    Stroke="#10B981"
+                                    StrokeThickness="1"
+                                    Padding="12,6"
+                                    VerticalOptions="Center">
+                                <Label Text="Brak ostrzeżeń" FontSize="13" TextColor="#34D399" FontAttributes="Bold"/>
+                            </Border>
+                        </Grid>
                     </Border>
 
                     <!-- KAFEL 4: ALERTY -->
