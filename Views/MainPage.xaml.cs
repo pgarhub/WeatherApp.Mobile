@@ -5,8 +5,14 @@ namespace WeatherApp.Mobile.Views;
 
 public partial class MainPage : ContentPage
 {
-    private bool _isMapInitialized = false;
     private readonly MainViewModel _viewModel;
+    private bool _isMapRendered;
+    private bool _hasRealGpsFix;
+    private bool _isFullScreen;
+    private IDispatcherTimer? _gpsTimer;
+
+    private double _userLatitude = 49.6218;
+    private double _userLongitude = 20.6970;
 
     // Domyślne współrzędne (Nowy Sącz), gdy GPS nie zwrócił jeszcze pozycji
     private const double DefaultLat = 49.6218;
@@ -16,7 +22,7 @@ public partial class MainPage : ContentPage
     {
         InitializeComponent();
         _viewModel = viewModel;
-        BindingContext = viewModel;
+        BindingContext = _viewModel;
 
         _viewModel.PropertyChanged += (s, e) =>
         {
@@ -35,15 +41,74 @@ public partial class MainPage : ContentPage
     {
         base.OnAppearing();
 
-        if (!_isMapInitialized)
+        if (!_isMapRendered)
         {
-            _isMapInitialized = true;
-            await Task.Delay(150);
-            UpdateMapPosition(_viewModel.CurrentLatitude, _viewModel.CurrentLongitude);
+            _isMapRendered = true;
+            await InitializeLocationAndMapAsync();
+        }
+        else
+        {
+            _gpsTimer?.Start();
         }
     }
 
-    private void UpdateMapPosition(double lat, double lon)
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _gpsTimer?.Stop();
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if (_isFullScreen)
+        {
+            MainThread.BeginInvokeOnMainThread(async () => await CloseFullScreenMapAsync());
+            return true;
+        }
+
+        return base.OnBackButtonPressed();
+    }
+
+    private void ConfigureWebViewTouchForAndroid()
+    {
+#if ANDROID
+        Microsoft.Maui.Handlers.WebViewHandler.Mapper.AppendToMapping("AllowMapPanning", (handler, view) =>
+        {
+            handler.PlatformView.Touch += (s, e) =>
+            {
+                if (e.Event?.Action == Android.Views.MotionEventActions.Down ||
+                    e.Event?.Action == Android.Views.MotionEventActions.Move)
+                {
+                    handler.PlatformView.Parent?.RequestDisallowInterceptTouchEvent(true);
+                }
+                else if (e.Event?.Action == Android.Views.MotionEventActions.Up ||
+                         e.Event?.Action == Android.Views.MotionEventActions.Cancel)
+                {
+                    handler.PlatformView.Parent?.RequestDisallowInterceptTouchEvent(false);
+                }
+
+                e.Handled = false;
+            };
+        });
+#endif
+    }
+
+    private async Task InitializeLocationAndMapAsync()
+    {
+        await UpdateUserCoordinatesFromGpsAsync();
+
+        _viewModel.CurrentLatitude = _userLatitude;
+        _viewModel.CurrentLongitude = _userLongitude;
+
+        RenderMap(_userLatitude, _userLongitude);
+
+        _gpsTimer = Dispatcher.CreateTimer();
+        _gpsTimer.Interval = TimeSpan.FromSeconds(4);
+        _gpsTimer.Tick += async (s, e) => await RefreshLiveDotAsync();
+        _gpsTimer.Start();
+    }
+
+    private async Task<bool> UpdateUserCoordinatesFromGpsAsync()
     {
         try
         {
@@ -93,11 +158,83 @@ public partial class MainPage : ContentPage
                 </html>"
             };
 
-            MapWebView.Source = htmlSource;
-        }
-        catch (Exception ex)
+    private async Task OpenFullScreenMapAsync()
+    {
+        if (_isFullScreen) return;
+        _isFullScreen = true;
+
+        SmallMapContainer.Content = null;
+        MapWebView.HeightRequest = -1;
+        FullScreenMapContainer.Content = MapWebView;
+        FullScreenMapOverlay.IsVisible = true;
+
+        await Task.Delay(100);
+        await MapWebView.EvaluateJavaScriptAsync("setFullScreenMode(true);");
+    }
+
+    private async Task CloseFullScreenMapAsync()
+    {
+        if (!_isFullScreen) return;
+        _isFullScreen = false;
+
+        FullScreenMapOverlay.IsVisible = false;
+        FullScreenMapContainer.Content = null;
+        MapWebView.HeightRequest = 260;
+        SmallMapContainer.Content = MapWebView;
+
+        await Task.Delay(100);
+        await MapWebView.EvaluateJavaScriptAsync("setFullScreenMode(false);");
+    }
+
+    private async void OnCloseFullScreenClicked(object? sender, EventArgs e)
+    {
+        await CloseFullScreenMapAsync();
+    }
+
+    private async void OnResetMapButtonClicked(object? sender, EventArgs e)
+    {
+        _viewModel.CurrentLatitude = _userLatitude;
+        _viewModel.CurrentLongitude = _userLongitude;
+
+        await MapWebView.EvaluateJavaScriptAsync("resetToUserLocation();");
+    }
+
+    private async void MapWebView_Navigating(object? sender, WebNavigatingEventArgs e)
+    {
+        if (e.Url.StartsWith("maui://fullscreen"))
         {
-            System.Diagnostics.Debug.WriteLine($"Błąd mapy: {ex.Message}");
+            e.Cancel = true;
+            await OpenFullScreenMapAsync();
+            return;
+        }
+
+        if (e.Url.StartsWith("maui://mapclick"))
+        {
+            e.Cancel = true;
+
+            var uri = new Uri(e.Url);
+            var queryParams = uri.Query.TrimStart('?').Split('&');
+
+            double? clickedLat = null;
+            double? clickedLon = null;
+
+            foreach (var param in queryParams)
+            {
+                var parts = param.Split('=');
+                if (parts.Length == 2)
+                {
+                    if (parts[0] == "lat" && double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double lat))
+                        clickedLat = lat;
+                    if (parts[0] == "lon" && double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double lon))
+                        clickedLon = lon;
+                }
+            }
+
+            if (clickedLat.HasValue && clickedLon.HasValue)
+            {
+                _viewModel.CurrentLatitude = clickedLat.Value;
+                _viewModel.CurrentLongitude = clickedLon.Value;
+            }
         }
     }
 
