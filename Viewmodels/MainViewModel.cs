@@ -18,6 +18,8 @@ public class MainViewModel : INotifyPropertyChanged
     private string _biometricStatus = "Zablokowane";
     private bool _isLoading = true;
     private bool _isWeatherLoading = false;
+    private double _currentLatitude;
+    private double _currentLongitude;
 
     // Pola dla Kafelka 3 (Alerty)
     private string _alertTitle = "Brak ostrzeżeń";
@@ -31,6 +33,36 @@ public class MainViewModel : INotifyPropertyChanged
     protected void OnPropertyChanged([CallerMemberName] string propertyName = null!)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    public string AlertTitle
+    {
+        get => _alertTitle;
+        set { if (_alertTitle != value) { _alertTitle = value; OnPropertyChanged(); } }
+    }
+
+    public string AlertDescription
+    {
+        get => _alertDescription;
+        set { if (_alertDescription != value) { _alertDescription = value; OnPropertyChanged(); } }
+    }
+
+    public Color AlertBadgeBackground
+    {
+        get => _alertBadgeBackground;
+        set { if (_alertBadgeBackground != value) { _alertBadgeBackground = value; OnPropertyChanged(); } }
+    }
+
+    public Color AlertBadgeBorder
+    {
+        get => _alertBadgeBorder;
+        set { if (_alertBadgeBorder != value) { _alertBadgeBorder = value; OnPropertyChanged(); } }
+    }
+
+    public Color AlertBadgeText
+    {
+        get => _alertBadgeText;
+        set { if (_alertBadgeText != value) { _alertBadgeText = value; OnPropertyChanged(); } }
     }
 
     public double CurrentLatitude
@@ -232,6 +264,7 @@ public class MainViewModel : INotifyPropertyChanged
             AlertBadgeText = Color.FromArgb("#34D399");
         }
     }
+
 
     private WeatherData GetFallbackWeatherData(string statusText)
     {

@@ -6,7 +6,6 @@
              x:DataType="vm:MainViewModel"
              Shell.NavBarIsVisible="False">
 
-    <!-- TŁO Z GRADIENTEM DOPASOWANE DO EKRANU STARTOWEGO -->
     <ContentPage.Background>
         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#0F172A" Offset="0.0" />
@@ -18,13 +17,27 @@
     <Grid>
         <!-- DASHBOARD -->
         <ScrollView>
-            <Grid RowDefinitions="Auto, *" Padding="20" RowSpacing="20">
+            <Grid RowDefinitions="Auto, Auto, Auto" Padding="20,12,20,20" RowSpacing="14">
+
+                <!-- 0. GÓRNY PASEK Z ZĘBATKĄ (NAD KARTĄ) -->
+                <Button Grid.Row="0"
+                        Text="⚙️"
+                        Clicked="OnSettingsClicked"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        WidthRequest="44"
+                        HeightRequest="44"
+                        CornerRadius="14"
+                        FontSize="20"
+                        BackgroundColor="#1E293B"
+                        TextColor="#94A3B8"
+                        BorderColor="#334155"
+                        BorderWidth="1" />
 
                 <!-- 1. GŁÓWNA KARTA POGODOWA -->
-                <Border Grid.Row="0" 
+                <Border Grid.Row="1" 
                         StrokeShape="RoundRectangle 28" 
-                        StrokeThickness="1.5"
-                        Margin="0,10,0,0">
+                        StrokeThickness="1.5">
                     <Border.Stroke>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#38BDF8" Offset="0.0" />
@@ -40,8 +53,6 @@
                     </Border.Background>
 
                     <VerticalStackLayout Padding="24" Spacing="12" HorizontalOptions="Center">
-
-                        <!-- Nazwa miasta -->
                         <Label Text="{Binding CurrentWeather.CityName}" 
                                FontSize="30" 
                                FontAttributes="Bold" 
@@ -49,13 +60,11 @@
                                HorizontalOptions="Center"
                                CharacterSpacing="0.5"/>
 
-                        <!-- Ikona pogody -->
                         <Label Text="{Binding CurrentWeather.Icon}" 
                                FontSize="78" 
                                HorizontalOptions="Center"
                                Margin="0,-5,0,-5"/>
 
-                        <!-- Temperatura -->
                         <HorizontalStackLayout HorizontalOptions="Center" Spacing="4">
                             <Label Text="{Binding CurrentWeather.Temperature, StringFormat='{0:F1}'}" 
                                    FontSize="54" 
@@ -68,7 +77,6 @@
                                    Margin="0,8,0,0"/>
                         </HorizontalStackLayout>
 
-                        <!-- Opis stanu pogodowego -->
                         <Border StrokeShape="RoundRectangle 16" BackgroundColor="#1E3A8A" Padding="16,6" HorizontalOptions="Center" Stroke="#3B82F6" StrokeThickness="1">
                             <Label Text="{Binding CurrentWeather.ConditionText}" 
                                    FontSize="14" 
@@ -76,7 +84,6 @@
                                    TextColor="#93C5FD"/>
                         </Border>
 
-                        <!-- Przycisk Odświeżania -->
                         <Button Text="🔄  Odśwież dane" 
                                 Command="{Binding RefreshCommand}"
                                 TextColor="White" 
@@ -96,8 +103,8 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- 2. KAFELKI SENSORÓW (GRID 2x2) -->
-                <Grid Grid.Row="1" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="15" RowSpacing="15">
+                <!-- 2. KAFELKI -->
+                <Grid Grid.Row="2" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="15" RowSpacing="15">
 
                     <!-- KAFEL 1: KROKI -->
                     <Border Grid.Row="0" Grid.Column="0" 
@@ -147,43 +154,83 @@
                                     <Label Text="⚠️" FontSize="16"/>
                                     <Label Text="Alerty" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
                                 </HorizontalStackLayout>
-                                <Label Text="Pogoda bezpieczna" FontSize="12" TextColor="#64748B"/>
+                                <Label Text="{Binding AlertDescription}" FontSize="12" TextColor="#64748B"/>
                             </VerticalStackLayout>
 
                             <Border Grid.Column="1"
                                     StrokeShape="RoundRectangle 12"
-                                    BackgroundColor="#064E3B"
-                                    Stroke="#10B981"
+                                    BackgroundColor="{Binding AlertBadgeBackground}"
+                                    Stroke="{Binding AlertBadgeBorder}"
                                     StrokeThickness="1"
                                     Padding="12,6"
                                     VerticalOptions="Center">
-                                <Label Text="Brak ostrzeżeń" FontSize="13" TextColor="#34D399" FontAttributes="Bold"/>
+                                <Label Text="{Binding AlertTitle}" FontSize="13" TextColor="{Binding AlertBadgeText}" FontAttributes="Bold"/>
                             </Border>
                         </Grid>
                     </Border>
 
-                    <!-- KAFEL 4: ALERTY -->
-                    <Border Grid.Row="1" Grid.Column="1" 
+                    <!-- KAFEL 4: SAMA MAPA -->
+                    <Border x:Name="SmallMapContainer"
+                            Grid.Row="2" Grid.ColumnSpan="2" 
                             StrokeShape="RoundRectangle 22" 
-                            BackgroundColor="#1E293B" 
-                            Padding="16" 
+                            BackgroundColor="#0F172A" 
                             Stroke="#334155" 
-                            StrokeThickness="1">
-                        <VerticalStackLayout Spacing="6">
-                            <HorizontalStackLayout Spacing="6">
-                                <Label Text="⚠️" FontSize="16"/>
-                                <Label Text="Alerty" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
-                            </HorizontalStackLayout>
-                            <Label Text="Brak ostrzeżeń" FontSize="15" TextColor="#34D399" FontAttributes="Bold" Margin="0,4,0,0"/>
-                            <Label Text="Pogoda bezpieczna" FontSize="11" TextColor="#64748B"/>
-                        </VerticalStackLayout>
+                            StrokeThickness="1"
+                            HeightRequest="260"
+                            Margin="0,0,0,12">
+                        <WebView x:Name="MapWebView"
+                                 Navigating="MapWebView_Navigating"
+                                 HeightRequest="260"
+                                 HorizontalOptions="Fill"
+                                 VerticalOptions="Fill" />
                     </Border>
 
                 </Grid>
             </Grid>
         </ScrollView>
-        <!-- 3. NAKŁADKA ŁADOWANIA (GLASSHOUSE EFFECT) -->
 
+        <!-- PEŁNY EKRAN MAPY -->
+        <Grid x:Name="FullScreenMapOverlay"
+              IsVisible="False"
+              BackgroundColor="#0F172A"
+              VerticalOptions="Fill"
+              HorizontalOptions="Fill">
+
+            <ContentView x:Name="FullScreenMapContainer"
+                         HorizontalOptions="Fill"
+                         VerticalOptions="Fill" />
+
+            <Grid ColumnDefinitions="Auto, *, Auto"
+                  VerticalOptions="Start"
+                  Margin="16,36,16,0">
+                <Button Grid.Column="0"
+                        Text="✕"
+                        Clicked="OnCloseFullScreenClicked"
+                        BackgroundColor="#1E293B"
+                        TextColor="White"
+                        BorderColor="#334155"
+                        BorderWidth="1"
+                        FontAttributes="Bold"
+                        FontSize="16"
+                        CornerRadius="14"
+                        WidthRequest="44"
+                        HeightRequest="44"/>
+
+                <Button Grid.Column="2"
+                        Text="🎯"
+                        Clicked="OnResetMapButtonClicked"
+                        BackgroundColor="#1E293B"
+                        TextColor="#38BDF8"
+                        BorderColor="#38BDF8"
+                        BorderWidth="1"
+                        FontSize="18"
+                        CornerRadius="14"
+                        WidthRequest="44"
+                        HeightRequest="44"/>
+            </Grid>
+        </Grid>
+
+        <!-- 3. NAKŁADKA ŁADOWANIA (GLASSHOUSE EFFECT) -->
         <Grid BackgroundColor="#DD0F172A" 
               IsVisible="{Binding IsLoading}"
               VerticalOptions="Fill" 
