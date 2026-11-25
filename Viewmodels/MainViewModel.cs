@@ -35,6 +35,36 @@ public class MainViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
+    public string AlertTitle
+    {
+        get => _alertTitle;
+        set { if (_alertTitle != value) { _alertTitle = value; OnPropertyChanged(); } }
+    }
+
+    public string AlertDescription
+    {
+        get => _alertDescription;
+        set { if (_alertDescription != value) { _alertDescription = value; OnPropertyChanged(); } }
+    }
+
+    public Color AlertBadgeBackground
+    {
+        get => _alertBadgeBackground;
+        set { if (_alertBadgeBackground != value) { _alertBadgeBackground = value; OnPropertyChanged(); } }
+    }
+
+    public Color AlertBadgeBorder
+    {
+        get => _alertBadgeBorder;
+        set { if (_alertBadgeBorder != value) { _alertBadgeBorder = value; OnPropertyChanged(); } }
+    }
+
+    public Color AlertBadgeText
+    {
+        get => _alertBadgeText;
+        set { if (_alertBadgeText != value) { _alertBadgeText = value; OnPropertyChanged(); } }
+    }
+
     public double CurrentLatitude
     {
         get => _currentLatitude;
@@ -234,6 +264,7 @@ public class MainViewModel : INotifyPropertyChanged
             AlertBadgeText = Color.FromArgb("#34D399");
         }
     }
+
 
     private WeatherData GetFallbackWeatherData(string statusText)
     {

@@ -14,13 +14,27 @@ public partial class MainPage : ContentPage
     private double _userLatitude = 49.6218;
     private double _userLongitude = 20.6970;
 
+    // Domyślne współrzędne (Nowy Sącz), gdy GPS nie zwrócił jeszcze pozycji
+    private const double DefaultLat = 49.6218;
+    private const double DefaultLon = 20.6970;
+
     public MainPage(MainViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
 
-        ConfigureWebViewTouchForAndroid();
+        _viewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.CurrentLatitude) ||
+                e.PropertyName == nameof(MainViewModel.CurrentLongitude))
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    UpdateMapPosition(_viewModel.CurrentLatitude, _viewModel.CurrentLongitude);
+                });
+            }
+        };
     }
 
     protected override async void OnAppearing()
@@ -98,158 +112,51 @@ public partial class MainPage : ContentPage
     {
         try
         {
-            var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
-            if (status != PermissionStatus.Granted)
+            double targetLat = (lat == 0 && lon == 0) ? DefaultLat : lat;
+            double targetLon = (lat == 0 && lon == 0) ? DefaultLon : lon;
+
+            // InvariantCulture wymusza kropkę zamiast przecinka w liczbach (wymagane przez JS)
+            string latStr = targetLat.ToString(CultureInfo.InvariantCulture);
+            string lonStr = targetLon.ToString(CultureInfo.InvariantCulture);
+
+            var htmlSource = new HtmlWebViewSource
             {
-                status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
-            }
+                Html = $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset='utf-8' />
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+                    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />
+                    <style>
+                        body, html {{ margin: 0; padding: 0; height: 100%; background: #1E293B; }}
+                        #map {{ width: 100%; height: 100%; touch-action: pan-x pan-y; }}
+                    </style>
+                </head>
+                <body>
+                    <div id='map'></div>
+                    <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                    <script>
+                        var map = L.map('map', {{
+                            zoomControl: false,
+                            attributionControl: false,
+                            dragging: true,
+                            tap: true
+                        }}).setView([{latStr}, {lonStr}], 14);
 
-            if (status == PermissionStatus.Granted)
-            {
-                var location = await Geolocation.Default.GetLocationAsync(
-                    new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(5)));
+                        L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                            maxZoom: 19
+                        }}).addTo(map);
 
-                if (location == null)
-                {
-                    location = await Geolocation.Default.GetLastKnownLocationAsync();
-                }
+                        L.marker([{latStr}, {lonStr}]).addTo(map);
 
-                if (location != null)
-                {
-                    _userLatitude = location.Latitude;
-                    _userLongitude = location.Longitude;
-                    return true;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Błąd GPS: {ex.Message}");
-        }
-
-        return false;
-    }
-
-    private async Task RefreshLiveDotAsync()
-    {
-        bool gotFix = await UpdateUserCoordinatesFromGpsAsync();
-        if (!gotFix) return;
-
-        bool isFirstFix = !_hasRealGpsFix;
-        _hasRealGpsFix = true;
-
-        string latStr = _userLatitude.ToString(CultureInfo.InvariantCulture);
-        string lonStr = _userLongitude.ToString(CultureInfo.InvariantCulture);
-        string centerParam = isFirstFix ? "true" : "false";
-
-        await MapWebView.EvaluateJavaScriptAsync($"updateLiveUserLocation({latStr}, {lonStr}, {centerParam});");
-    }
-
-    private void RenderMap(double lat, double lon)
-    {
-        string latStr = lat.ToString(CultureInfo.InvariantCulture);
-        string lonStr = lon.ToString(CultureInfo.InvariantCulture);
-
-        MapWebView.Source = new HtmlWebViewSource
-        {
-            Html = $@"
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset='utf-8' />
-                <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
-                <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />
-                <style>
-                    body, html {{ margin: 0; padding: 0; height: 100%; background: #0F172A; }}
-                    #map {{ width: 100%; height: 100%; }}
-                </style>
-            </head>
-            <body>
-                <div id='map'></div>
-                <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
-                <script>
-                    var homeLat = {latStr};
-                    var homeLon = {lonStr};
-                    var isFullScreen = false;
-
-                    var map = L.map('map', {{
-                        zoomControl: true,
-                        attributionControl: false,
-                        dragging: true,
-                        touchZoom: true
-                    }}).setView([homeLat, homeLon], 15);
-
-                    L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-                        maxZoom: 19
-                    }}).addTo(map);
-
-                    var userCircle = L.circle([homeLat, homeLon], {{
-                        color: '#38BDF8',
-                        fillColor: '#38BDF8',
-                        fillOpacity: 0.15,
-                        radius: 120,
-                        weight: 1
-                    }}).addTo(map);
-
-                    var userDot = L.circleMarker([homeLat, homeLon], {{
-                        radius: 9,
-                        fillColor: '#2563EB',
-                        color: '#FFFFFF',
-                        weight: 3,
-                        opacity: 1,
-                        fillOpacity: 1
-                    }}).addTo(map);
-
-                    var clickedPin = null;
-
-                    map.on('click', function(e) {{
-                        if (!isFullScreen) {{
-                            window.location.href = 'maui://fullscreen';
-                            return;
-                        }}
-
-                        var newLat = e.latlng.lat.toFixed(5);
-                        var newLon = e.latlng.lng.toFixed(5);
-
-                        if (clickedPin === null) {{
-                            clickedPin = L.marker(e.latlng).addTo(map);
-                        }} else {{
-                            clickedPin.setLatLng(e.latlng);
-                        }}
-
-                        window.location.href = 'maui://mapclick?lat=' + newLat + '&lon=' + newLon;
-                    }});
-
-                    function setFullScreenMode(enabled) {{
-                        isFullScreen = enabled;
-                        setTimeout(function() {{
-                            map.invalidateSize();
-                        }}, 150);
-                    }}
-
-                    function updateLiveUserLocation(newLat, newLon, shouldCenter) {{
-                        homeLat = newLat;
-                        homeLon = newLon;
-                        userDot.setLatLng([newLat, newLon]);
-                        userCircle.setLatLng([newLat, newLon]);
-
-                        if (shouldCenter) {{
-                            map.flyTo([newLat, newLon], 15, {{ duration: 0.8 }});
-                        }}
-                    }}
-
-                    function resetToUserLocation() {{
-                        if (clickedPin !== null) {{
-                            map.removeLayer(clickedPin);
-                            clickedPin = null;
-                        }}
-                        map.flyTo([homeLat, homeLon], 15, {{ duration: 0.8 }});
-                    }}
-                </script>
-            </body>
-            </html>"
-        };
-    }
+                        map.on('click', function() {{
+                            window.location.href = 'app://expandmap';
+                        }});
+                    </script>
+                </body>
+                </html>"
+            };
 
     private async Task OpenFullScreenMapAsync()
     {
@@ -329,5 +236,37 @@ public partial class MainPage : ContentPage
                 _viewModel.CurrentLongitude = clickedLon.Value;
             }
         }
+    }
+
+    private void MapWebView_Navigating(object? sender, WebNavigatingEventArgs e)
+    {
+        if (e.Url.StartsWith("app://expandmap"))
+        {
+            e.Cancel = true;
+
+            if (!FullScreenMapOverlay.IsVisible)
+            {
+                SmallMapContainer.Content = null;
+                FullScreenMapContainer.Content = MapWebView;
+                FullScreenMapOverlay.IsVisible = true;
+            }
+        }
+    }
+
+    private void OnCloseFullScreenClicked(object? sender, EventArgs e)
+    {
+        FullScreenMapOverlay.IsVisible = false;
+        FullScreenMapContainer.Content = null;
+        SmallMapContainer.Content = MapWebView;
+    }
+
+    private void OnResetMapButtonClicked(object? sender, EventArgs e)
+    {
+        UpdateMapPosition(_viewModel.CurrentLatitude, _viewModel.CurrentLongitude);
+    }
+
+    private async void OnSettingsClicked(object? sender, EventArgs e)
+    {
+        await Navigation.PushModalAsync(new SettingsPage());
     }
 }

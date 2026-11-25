@@ -17,13 +17,27 @@
     <Grid>
         <!-- DASHBOARD -->
         <ScrollView>
-            <Grid RowDefinitions="Auto, Auto" Padding="20" RowSpacing="20">
+            <Grid RowDefinitions="Auto, Auto, Auto" Padding="20,12,20,20" RowSpacing="14">
+
+                <!-- 0. GÓRNY PASEK Z ZĘBATKĄ (NAD KARTĄ) -->
+                <Button Grid.Row="0"
+                        Text="⚙️"
+                        Clicked="OnSettingsClicked"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        WidthRequest="44"
+                        HeightRequest="44"
+                        CornerRadius="14"
+                        FontSize="20"
+                        BackgroundColor="#1E293B"
+                        TextColor="#94A3B8"
+                        BorderColor="#334155"
+                        BorderWidth="1" />
 
                 <!-- 1. GŁÓWNA KARTA POGODOWA -->
-                <Border Grid.Row="0" 
+                <Border Grid.Row="1" 
                         StrokeShape="RoundRectangle 28" 
-                        StrokeThickness="1.5"
-                        Margin="0,10,0,0">
+                        StrokeThickness="1.5">
                     <Border.Stroke>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#38BDF8" Offset="0.0" />
@@ -90,7 +104,7 @@
                 </Border>
 
                 <!-- 2. KAFELKI -->
-                <Grid Grid.Row="1" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="15" RowSpacing="15">
+                <Grid Grid.Row="2" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="15" RowSpacing="15">
 
                     <!-- KAFEL 1: KROKI -->
                     <Border Grid.Row="0" Grid.Column="0" 
@@ -140,17 +154,17 @@
                                     <Label Text="⚠️" FontSize="16"/>
                                     <Label Text="Alerty" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" VerticalOptions="Center"/>
                                 </HorizontalStackLayout>
-                                <Label Text="Pogoda bezpieczna" FontSize="12" TextColor="#64748B"/>
+                                <Label Text="{Binding AlertDescription}" FontSize="12" TextColor="#64748B"/>
                             </VerticalStackLayout>
 
                             <Border Grid.Column="1"
                                     StrokeShape="RoundRectangle 12"
-                                    BackgroundColor="#064E3B"
-                                    Stroke="#10B981"
+                                    BackgroundColor="{Binding AlertBadgeBackground}"
+                                    Stroke="{Binding AlertBadgeBorder}"
                                     StrokeThickness="1"
                                     Padding="12,6"
                                     VerticalOptions="Center">
-                                <Label Text="Brak ostrzeżeń" FontSize="13" TextColor="#34D399" FontAttributes="Bold"/>
+                                <Label Text="{Binding AlertTitle}" FontSize="13" TextColor="{Binding AlertBadgeText}" FontAttributes="Bold"/>
                             </Border>
                         </Grid>
                     </Border>
@@ -215,8 +229,8 @@
                         HeightRequest="44"/>
             </Grid>
         </Grid>
-        <!-- 3. NAKŁADKA ŁADOWANIA (GLASSHOUSE EFFECT) -->
 
+        <!-- 3. NAKŁADKA ŁADOWANIA (GLASSHOUSE EFFECT) -->
         <Grid BackgroundColor="#DD0F172A" 
               IsVisible="{Binding IsLoading}"
               VerticalOptions="Fill" 
