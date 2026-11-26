@@ -21,6 +21,8 @@ public partial class MainPage : ContentPage
     public MainPage(MainViewModel viewModel)
     {
         InitializeComponent();
+        ConfigureWebViewTouchForAndroid();
+
         _viewModel = viewModel;
         BindingContext = _viewModel;
 
@@ -112,51 +114,138 @@ public partial class MainPage : ContentPage
     {
         try
         {
-            double targetLat = (lat == 0 && lon == 0) ? DefaultLat : lat;
-            double targetLon = (lat == 0 && lon == 0) ? DefaultLon : lon;
-
-            // InvariantCulture wymusza kropkę zamiast przecinka w liczbach (wymagane przez JS)
-            string latStr = targetLat.ToString(CultureInfo.InvariantCulture);
-            string lonStr = targetLon.ToString(CultureInfo.InvariantCulture);
-
-            var htmlSource = new HtmlWebViewSource
+            var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+            if (status != PermissionStatus.Granted)
             {
-                Html = $@"
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset='utf-8' />
-                    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
-                    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />
-                    <style>
-                        body, html {{ margin: 0; padding: 0; height: 100%; background: #1E293B; }}
-                        #map {{ width: 100%; height: 100%; touch-action: pan-x pan-y; }}
-                    </style>
-                </head>
-                <body>
-                    <div id='map'></div>
-                    <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
-                    <script>
-                        var map = L.map('map', {{
-                            zoomControl: false,
-                            attributionControl: false,
-                            dragging: true,
-                            tap: true
-                        }}).setView([{latStr}, {lonStr}], 14);
+                status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+            }
 
-                        L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-                            maxZoom: 19
-                        }}).addTo(map);
+            if (status != PermissionStatus.Granted)
+                return false;
 
-                        L.marker([{latStr}, {lonStr}]).addTo(map);
+            var location = await Geolocation.Default.GetLastKnownLocationAsync()
+                           ?? await Geolocation.Default.GetLocationAsync(new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(5)));
 
-                        map.on('click', function() {{
-                            window.location.href = 'app://expandmap';
-                        }});
-                    </script>
-                </body>
-                </html>"
-            };
+            if (location != null)
+            {
+                _userLatitude = location.Latitude;
+                _userLongitude = location.Longitude;
+                _hasRealGpsFix = true;
+                return true;
+            }
+        }
+        catch
+        {
+            // Ignorujemy błędy GPS (np. wyłączona lokalizacja) i zostajemy przy domyślnych współrzędnych
+        }
+
+        return false;
+    }
+
+    private async Task RefreshLiveDotAsync()
+    {
+        if (await UpdateUserCoordinatesFromGpsAsync())
+        {
+            string latStr = _userLatitude.ToString(CultureInfo.InvariantCulture);
+            string lonStr = _userLongitude.ToString(CultureInfo.InvariantCulture);
+            await MapWebView.EvaluateJavaScriptAsync($"if(typeof updateUserDot === 'function') updateUserDot({latStr}, {lonStr});");
+        }
+    }
+
+    private async void UpdateMapPosition(double lat, double lon)
+    {
+        if (!_isMapRendered) return;
+
+        string latStr = lat.ToString(CultureInfo.InvariantCulture);
+        string lonStr = lon.ToString(CultureInfo.InvariantCulture);
+        await MapWebView.EvaluateJavaScriptAsync($"if(typeof updateMapCenter === 'function') updateMapCenter({latStr}, {lonStr});");
+    }
+
+    private void RenderMap(double lat, double lon)
+    {
+        double targetLat = (lat == 0 && lon == 0) ? DefaultLat : lat;
+        double targetLon = (lat == 0 && lon == 0) ? DefaultLon : lon;
+
+        string latStr = targetLat.ToString(CultureInfo.InvariantCulture);
+        string lonStr = targetLon.ToString(CultureInfo.InvariantCulture);
+
+        var htmlSource = new HtmlWebViewSource
+        {
+            Html = $@"
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset='utf-8' />
+                <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+                <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />
+                <style>
+                    body, html {{ margin: 0; padding: 0; height: 100%; background: #1E293B; }}
+                    #map {{ width: 100%; height: 100%; touch-action: pan-x pan-y; }}
+                </style>
+            </head>
+            <body>
+                <div id='map'></div>
+                <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                <script>
+                    var isFullScreen = false;
+                    var userLat = {latStr};
+                    var userLon = {lonStr};
+
+                    var map = L.map('map', {{
+                        zoomControl: false,
+                        attributionControl: false,
+                        dragging: true,
+                        tap: true
+                    }}).setView([userLat, userLon], 14);
+
+                    L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                        maxZoom: 19
+                    }}).addTo(map);
+
+                    var marker = L.marker([userLat, userLon]).addTo(map);
+                    var userDot = L.circleMarker([userLat, userLon], {{
+                        radius: 6,
+                        fillColor: '#3B82F6',
+                        color: '#FFFFFF',
+                        weight: 2,
+                        fillOpacity: 1
+                    }}).addTo(map);
+
+                    map.on('click', function(e) {{
+                        if (!isFullScreen) {{
+                            window.location.href = 'maui://fullscreen';
+                        }} else {{
+                            marker.setLatLng(e.latlng);
+                            window.location.href = 'maui://mapclick?lat=' + e.latlng.lat + '&lon=' + e.latlng.lng;
+                        }}
+                    }});
+
+                    function setFullScreenMode(full) {{
+                        isFullScreen = full;
+                        setTimeout(function() {{ map.invalidateSize(); }}, 150);
+                    }}
+
+                    function updateMapCenter(lat, lon) {{
+                        map.setView([lat, lon], map.getZoom());
+                        marker.setLatLng([lat, lon]);
+                    }}
+
+                    function updateUserDot(lat, lon) {{
+                        userLat = lat;
+                        userLon = lon;
+                        userDot.setLatLng([lat, lon]);
+                    }}
+
+                    function resetToUserLocation() {{
+                        updateMapCenter(userLat, userLon);
+                    }}
+                </script>
+            </body>
+            </html>"
+        };
+
+        MapWebView.Source = htmlSource;
+    }
 
     private async Task OpenFullScreenMapAsync()
     {
@@ -236,33 +325,6 @@ public partial class MainPage : ContentPage
                 _viewModel.CurrentLongitude = clickedLon.Value;
             }
         }
-    }
-
-    private void MapWebView_Navigating(object? sender, WebNavigatingEventArgs e)
-    {
-        if (e.Url.StartsWith("app://expandmap"))
-        {
-            e.Cancel = true;
-
-            if (!FullScreenMapOverlay.IsVisible)
-            {
-                SmallMapContainer.Content = null;
-                FullScreenMapContainer.Content = MapWebView;
-                FullScreenMapOverlay.IsVisible = true;
-            }
-        }
-    }
-
-    private void OnCloseFullScreenClicked(object? sender, EventArgs e)
-    {
-        FullScreenMapOverlay.IsVisible = false;
-        FullScreenMapContainer.Content = null;
-        SmallMapContainer.Content = MapWebView;
-    }
-
-    private void OnResetMapButtonClicked(object? sender, EventArgs e)
-    {
-        UpdateMapPosition(_viewModel.CurrentLatitude, _viewModel.CurrentLongitude);
     }
 
     private async void OnSettingsClicked(object? sender, EventArgs e)
